@@ -94,7 +94,7 @@ class PacketParserImpl : public PacketParser {
 					string line(buffer+beg, buffer+end);
 					int mid      = line.find_first_of(':');
 					string key   = line.substr(0, mid);
-					string value = line.substr(mid+1, line.size());
+					string value = line.substr(mid+2, line.size());
 					header[key]  = value;
 					beg = i+1;
 				}
@@ -113,10 +113,25 @@ class PacketParserImpl : public PacketParser {
 
 			PacketImpl *newPacket = new PacketImpl();
 			newPacket->headers = headers;
-			(*bufferUsed) = index;
+			(*bufferUsed) = index+1;
 			return (Packet*) newPacket;
 		} else {
-			return NULL;
+			//TODO Decode frame data here, we can wait for full frames easily.
+			cout << "Dumping data" << endl;
+			for ( int i = 0; i < bufferSize; ++i) {
+				printf("%02X ",buffer[i] & 0xFF);
+			}
+			cout << endl;
+
+			unsigned short length = buffer[1] & 0x7F;
+			cout << "length: " << length << endl;
+			
+			PacketImpl *packet = new PacketImpl();
+			packet->data = new unsigned char[bufferSize];
+			packet->size = bufferSize;
+			memcpy(packet->data, buffer, bufferSize);
+			(*bufferUsed) = bufferSize;
+			return packet;
 		}
 
 		return NULL;
@@ -146,14 +161,12 @@ class PacketParserImpl : public PacketParser {
 			
 			headers.erase("Code");
 			size += cmdSize;
-
 			
 			//Headers size
 			for ( auto e : headers ) {
 				size += (e.first.length() + e.second.length() + 4); //4 = colon + space + \r\n
 			}
-			size += 4;//ending \r\n\r\n
-
+			size += 2;//ending \r\n
 			
 			char *outs = new char[size];
 			int idx = 0;
@@ -179,8 +192,6 @@ class PacketParserImpl : public PacketParser {
 			
 			memcpy(outs+idx, "\r\n", 2);
 			idx += 2;
-			memcpy(outs+idx, "\r\n", 2);
-			idx += 2;
 
 			//idx should equal size here
 			if ( idx != size ) {
@@ -191,6 +202,7 @@ class PacketParserImpl : public PacketParser {
 			return outs;
 		} else {
 			//Normal Data
+			//TODO Encode into frame
 			char *out = new char[packet->size];
 			memcpy(out, packet->data, packet->size);
 			(*out_size) = packet->size;
@@ -201,11 +213,13 @@ class PacketParserImpl : public PacketParser {
 	}
 };
 
-typedef void (*recv_data_callback)(unsigned char *, unsigned int);
+typedef void (*recv_data_callback)(int, unsigned char *, unsigned int);
 
 class cppweb {
 	public:
 		cppweb( recv_data_callback cb ) {
+			OpenSSL_add_all_algorithms();
+			
 			onData = cb;
 
 			packetParser   = new PacketParserImpl();
@@ -273,7 +287,23 @@ class cppweb {
 			std::string s(dt, len);
 			return s;
 		}
+	
+		static unsigned int
+		Hash(const char *mode, const char* dataToHash, size_t dataSize, unsigned char* outHashed) {
 		
+			unsigned int md_len = -1;
+			const EVP_MD *md = EVP_get_digestbyname(mode);
+			if(NULL != md) {
+				EVP_MD_CTX mdctx;
+				EVP_MD_CTX_init(&mdctx);
+				EVP_DigestInit_ex(&mdctx, md, NULL);
+				EVP_DigestUpdate(&mdctx, dataToHash, dataSize);
+				EVP_DigestFinal_ex(&mdctx, outHashed, &md_len);
+				EVP_MD_CTX_cleanup(&mdctx);
+			}
+			return md_len;
+		}
+
 		PacketParser *packetParser;
 		AsyncTransport *asyncTransport;
 		map<unsigned int, bool> *upgraded;
@@ -289,21 +319,21 @@ class cppweb {
 			while( 1 ) {
 					PacketImpl *packet = (PacketImpl*) asyncTransport->getPacket();
 					int fd = packet->fd;
-					
+
 					if(upgraded->count(fd) > 0) {
-						onData(packet->data, packet->size);
+						onData(packet->fd, packet->data, packet->size);
 					} else {
 						//need handshake first
 						//If upgrade requested, send reply
 						map<string, string> &headers = packet->headers;
+						
 						if( headers.count("Upgrade") > 0 && headers.count("Sec-WebSocket-Key") > 0 
 								&& headers["Upgrade"] == "websocket" ) {
 							
-							//TODO, generate response and add fd
 							string key = headers["Sec-WebSocket-Key"] + SecMagic;
-							unsigned char hash[SHA_DIGEST_LENGTH];
-							SHA1((const unsigned char *)key.c_str(), key.length(), hash);
-							string encodedKey = base64_encode( hash, SHA_DIGEST_LENGTH );
+							unsigned char hashed[SHA_DIGEST_LENGTH];
+							Hash("SHA1", (const char *)key.c_str(), key.length(), hashed);
+							string encodedKey = base64_encode( hashed, SHA_DIGEST_LENGTH );
 
 							PacketImpl *response = new PacketImpl();
 							response->setOrigin((Packet*) packet);
@@ -312,8 +342,8 @@ class cppweb {
 							responseHeaders["Upgrade"]    = "websocket";
 							responseHeaders["Connection"] = "Upgrade";
 							responseHeaders["Sec-WebSocket-Accept"] = encodedKey;
-							asyncTransport->sendPacket(response);
 							(*upgraded)[fd] = true;
+							asyncTransport->sendPacket(response);
 							
 						} else {
 							//Not a websocket request, send 400
@@ -322,8 +352,7 @@ class cppweb {
 							response->setResponseCode(400);
 							asyncTransport->sendPacket(response);
 
-							//TODO This is bad, need better interface for closing sockets
-							//Something in libasock like sendThenClose(hard) or closePacket(easy, unreliable)?
+							//TODO Bad interface?
 							asyncTransport->closeFd( packet->fd );
 						}
 
@@ -337,18 +366,18 @@ class cppweb {
 const string cppweb::SecMagic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 void
-onData(unsigned char *data, unsigned int size) {
-	cout << "Got data of size: " << size << endl;
+onData(int fd, unsigned char *data, unsigned int size) {
+	cout << "Fd " << fd << " got data of size: " << size << endl;
 	for ( unsigned int i = 0; i < size; ++i ) {
-		cout << data[i];
+		printf("%02X ", data[i] & 0xFF);
 	}
-	cout << endl << endl;
+	cout << endl;
 }
 
 int
 main( int argv, char **argc ) {
 	cppweb cw(onData);
-	cw.start(80);
+	cw.start(8000);
 
 	while(1) {
 		usleep(1000000);
