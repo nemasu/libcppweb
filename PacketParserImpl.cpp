@@ -112,6 +112,12 @@ PacketParserImpl::deserialize ( unsigned char *buffer, unsigned int bufferSize, 
 		}
 
 		(*bufferUsed) = idx + length;
+
+		//Special close socket code
+		if( length == 2 && dest[0] == 0x03 && dest[1] == 0xe9 ) {
+			packet->type = DISCONNECT;
+		}
+		
 		return packet;
 	}
 
