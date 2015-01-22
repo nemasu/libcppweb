@@ -137,6 +137,7 @@ CppWeb::RecvThread( CppWeb *instance ) {
 
 		if(       packet->type == DISCONNECT ) {
 			upgraded->erase(fd);
+			onData(packet->fd, NULL, 0);
 		} else if(upgraded->count(fd) > 0) {
 			onData(packet->fd, packet->data, packet->size);
 		} else {
