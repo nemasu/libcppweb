@@ -5,6 +5,7 @@
 #include <openssl/sha.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
+#include <arpa/inet.h>
 #include <AsyncTransport.h>
 
 using std::cout;
@@ -116,21 +117,40 @@ class PacketParserImpl : public PacketParser {
 			(*bufferUsed) = index+1;
 			return (Packet*) newPacket;
 		} else {
-			//TODO Decode frame data here, we can wait for full frames easily.
-			cout << "Dumping data" << endl;
-			for ( int i = 0; i < bufferSize; ++i) {
-				printf("%02X ",buffer[i] & 0xFF);
+			int idx = 0;
+			//Don't care if its done or not, just want data
+			//unsigned char fin = buffer[idx++] & 0x01;
+			idx++;
+			
+			/*for ( unsigned int i = 0; i < bufferSize; ++i ) {
+				printf("%02X ", buffer[i] & 0xFF);
 			}
-			cout << endl;
+			cout << endl;*/
 
-			unsigned short length = buffer[1] & 0x7F;
-			cout << "length: " << length << endl;
+			uint64_t length = buffer[idx++] & 0x7F;
+
+			if ( length == 126 ) {
+				length = *((uint16_t *)&buffer[idx]);
+				idx += sizeof(uint16_t);
+			} else if ( length == 127 ) {
+				length = *((uint64_t *)&buffer[idx]);
+				idx += sizeof(uint64_t);
+			}
+			
+			char mask[4];
+			memcpy( mask, &buffer[idx], 4 );
+			idx += 4;
 			
 			PacketImpl *packet = new PacketImpl();
-			packet->data = new unsigned char[bufferSize];
-			packet->size = bufferSize;
-			memcpy(packet->data, buffer, bufferSize);
-			(*bufferUsed) = bufferSize;
+			packet->data = new unsigned char[length];
+			packet->size = length;
+
+			unsigned char *dest = packet->data;
+			for ( unsigned int i = 0; i < length; i++ ) {
+				dest[i] = buffer[i+idx] ^ mask[i % 4];
+			}
+
+			(*bufferUsed) = idx + length;
 			return packet;
 		}
 
@@ -371,7 +391,10 @@ const string cppweb::SecMagic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 void
 onData(int fd, unsigned char *data, unsigned int size) {
-	cout << "Fd " << fd << " got data of size: " << size << endl;
+	cout << "onData - Fd " << fd << " got data of size: " << size << endl;
+	cout << "string: " << data << endl;
+
+	cout << "hex: ";
 	for ( unsigned int i = 0; i < size; ++i ) {
 		printf("%02X ", data[i] & 0xFF);
 	}
