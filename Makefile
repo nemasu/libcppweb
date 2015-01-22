@@ -1,8 +1,25 @@
+CCOPTS=-std=c++11 -fpic -Wall -Werror -I/usr/include/libasock
 
+all: CCOPTS += -O2
 all: libcppweb
 
-libcppweb: main.cpp
-	clang++ -Wall -Werror -g -std=c++11 -I/usr/include/libasock main.cpp -lasock -o libcppweb -lcrypto
+debug: CCOPTS += -g
+debug: libcppweb
+
+libcppweb: CppWeb.o PacketParserImpl.o
+	g++ ${CCOPTS} -shared CppWeb.o PacketParserImpl.o -o libcppweb.so -lcrypto -lasock
+
+PacketParserImpl.o: PacketParserImpl.h PacketParserImpl.cpp
+	g++ -c ${CCOPTS} PacketParserImpl.cpp -o PacketParserImpl.o
+
+CppWeb.o: CppWeb.cpp CppWeb.h
+	g++ -c ${CCOPTS} CppWeb.cpp -o CppWeb.o
 
 clean:
-	rm -rf *.o libcppweb
+	rm -rf *.o libcppweb*
+
+install: all
+	mkdir -p /usr/include/libcppweb
+	cp -v CppWeb.h /usr/include/libcppweb
+	cp -v libcppweb.so /usr/lib
+
