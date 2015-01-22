@@ -320,7 +320,9 @@ class cppweb {
 					PacketImpl *packet = (PacketImpl*) asyncTransport->getPacket();
 					int fd = packet->fd;
 
-					if(upgraded->count(fd) > 0) {
+					if(       packet->type == DISCONNECT ) {
+						upgraded->erase(fd);
+					} else if(upgraded->count(fd) > 0) {
 						onData(packet->fd, packet->data, packet->size);
 					} else {
 						//need handshake first
@@ -352,8 +354,10 @@ class cppweb {
 							response->setResponseCode(400);
 							asyncTransport->sendPacket(response);
 
-							//TODO Bad interface?
-							asyncTransport->closeFd( packet->fd );
+							Packet *disconnect = new Packet();
+							disconnect->setOrigin( (Packet *)packet );
+							disconnect->type = DISCONNECT;
+							asyncTransport->sendPacket( disconnect );
 						}
 
 					}
