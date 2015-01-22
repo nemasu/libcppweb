@@ -190,10 +190,44 @@ PacketParserImpl::serialize ( Packet *pkt, unsigned int *out_size ) {
 		return outs;
 	} else {
 		//Normal Data
-		//TODO Encode into frame
-		char *out = new char[packet->size];
-		memcpy(out, packet->data, packet->size);
-		(*out_size) = packet->size;
+		unsigned char *rawData = packet->data;
+
+		int frameCount  = 0;
+		char frame[10];
+
+		//frame[0] = (char) 130; //Fin and Binary data
+		frame[0] = (char) 129; //Fin and text data
+
+		long long packetSize = packet->size;
+		if( packetSize <= 125 ) {
+			frame[1] = (char) packetSize;
+			frameCount = 2;
+		} else if( packetSize >= 126 && packetSize <= 65535 ) {
+			frame[1] = (char) 126;
+			int len = packetSize;
+			frame[2] = (char) ((len >> 8 ) & (char) 255);
+			frame[3] = (char) (len & (char) 255); 
+			frameCount = 4;
+		}else{
+			frame[1] = (char) 127;
+			long long len = packetSize;
+			frame[2] = (char) ((len >> 56 ) & (char)255);
+			frame[3] = (char) ((len >> 48 ) & (char)255);
+			frame[4] = (char) ((len >> 40 ) & (char)255);
+			frame[5] = (char) ((len >> 32 ) & (char)255);
+			frame[6] = (char) ((len >> 24 ) & (char)255);
+			frame[7] = (char) ((len >> 16 ) & (char)255);
+			frame[8] = (char) ((len >> 8  ) & (char)255);
+			frame[9] = (char) (len & (char)255);
+			frameCount = 10;
+		}
+
+		char *out = new char[frameCount + packetSize];
+
+		memcpy(out,              frame,   frameCount);
+		memcpy(out + frameCount, rawData, packetSize);
+		
+		(*out_size) = frameCount + packetSize;
 		return out;
 	}
 	

@@ -111,7 +111,20 @@ CppWeb::Hash(const char *mode, const char* dataToHash, size_t dataSize, unsigned
 	}
 	return md_len;
 }
- 
+
+void
+CppWeb::send( int fd, unsigned char *data, unsigned int length ) {
+
+	PacketImpl *packet = new PacketImpl();
+
+	packet->data = new unsigned char[length];
+	packet->size = length;
+	memcpy(packet->data, data, length);
+	packet->fd = fd;
+
+	asyncTransport->sendPacket(packet);
+}
+
 void
 CppWeb::RecvThread( CppWeb *instance ) {
 	recv_data_callback onData  = instance->onData;

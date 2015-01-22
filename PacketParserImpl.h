@@ -16,7 +16,6 @@ class PacketParserImpl : public PacketParser {
 	map<string, string>
 	parseHTTP ( unsigned char *buffer, unsigned int size ); 
 	
-	
 	Packet*
 	deserialize ( unsigned char *buffer, unsigned int bufferSize, unsigned int *bufferUsed );
 

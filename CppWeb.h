@@ -24,6 +24,9 @@ class CppWeb {
 		void
 		start( int port );
 
+		void
+		send( int fd, unsigned char *data, unsigned int size );
+
 	private:
 		static
 		string base64_encode( unsigned char* data, int size );
