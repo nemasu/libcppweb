@@ -133,8 +133,11 @@ CppWeb::RecvThread( CppWeb *instance ) {
 		PacketImpl *packet = (PacketImpl*) asyncTransport->getPacket();
 		int fd = packet->fd;
 
-		//TODO need to handle pings/pongs
-		if(        packet->type == PacketType::DISCONNECT ) {
+		if (packet->isPing == true) {
+			//Put back in transport, will serialize with proper opcode
+			asyncTransport->sendPacket(packet);
+			continue;
+		} else if(        packet->type == PacketType::DISCONNECT ) {
 			upgraded->erase(fd);
 			webListener->onClose(packet->fd);
 		} else if( packet->type == PacketType::CONNECT ) { 

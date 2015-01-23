@@ -79,10 +79,8 @@ PacketParserImpl::deserialize ( unsigned char *buffer, unsigned int bufferSize, 
 		return (Packet*) newPacket;
 	} else {
 		int idx = 0;
-		//Don't care if its done or not, just want data
-		//unsigned char fin = buffer[idx++] & 0x01;
-		idx++;
-		
+		unsigned char finOp = buffer[idx++];
+
 		/*for ( unsigned int i = 0; i < bufferSize; ++i ) {
 			printf("%02X ", buffer[i] & 0xFF);
 		}
@@ -126,8 +124,15 @@ PacketParserImpl::deserialize ( unsigned char *buffer, unsigned int bufferSize, 
 		//Special close socket code
 		if( length == 2 && dest[0] == 0x03 && dest[1] == 0xe9 ) {
 			packet->type = DISCONNECT;
+		} else if ( finOp == 137 ) {
+			//Fin & Ping
+			packet->isPing = true;
+		} else if ( finOp == 138 ) {
+			//Fin & Pong, ignore
+			delete packet;
+			return NULL;
 		}
-		
+
 		return packet;
 	}
 
@@ -205,9 +210,14 @@ PacketParserImpl::serialize ( Packet *pkt, unsigned int *out_size ) {
 		int frameCount  = 0;
 		char frame[10];
 
-		//frame[0] = (char) 130; //Fin and Binary data
-		frame[0] = (char) 129; //Fin and text data
-
+		//Ping packet. Put back into queue, make it a pong
+		if( packet->isPing ) {
+			frame[0] = (char) 138; // Fin & pong
+		} else {
+			//frame[0] = (char) 130; //Fin and Binary data
+			frame[0] = (char) 129; //Fin and text data
+		}
+			
 		long long packetSize = packet->size;
 		if( packetSize <= 125 ) {
 			frame[1] = (char) packetSize;
@@ -218,7 +228,7 @@ PacketParserImpl::serialize ( Packet *pkt, unsigned int *out_size ) {
 			frame[2] = (char) ((len >> 8 ) & (char) 255);
 			frame[3] = (char) (len & (char) 255); 
 			frameCount = 4;
-		}else{
+		} else {
 			frame[1] = (char) 127;
 			long long len = packetSize;
 			frame[2] = (char) ((len >> 56 ) & (char)255);

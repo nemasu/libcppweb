@@ -33,6 +33,7 @@ class PacketImpl : public Packet {
 
         unsigned char *data;
         int size;
+		bool isPing;
         map<string, string> headers;
 };
 
