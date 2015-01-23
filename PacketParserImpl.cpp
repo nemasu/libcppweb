@@ -91,13 +91,23 @@ PacketParserImpl::deserialize ( unsigned char *buffer, unsigned int bufferSize, 
 		uint64_t length = buffer[idx++] & 0x7F;
 
 		if ( length == 126 ) {
-			length = *((uint16_t *)&buffer[idx]);
-			idx += sizeof(uint16_t);
+			length = 0;
+			length = buffer[idx++];
+			length = length << 8;
+			length = length | buffer[idx++];
+
 		} else if ( length == 127 ) {
-			length = *((uint64_t *)&buffer[idx]);
-			idx += sizeof(uint64_t);
+			length = 0;
+			length |= (((long long)buffer[idx++]) << 56);
+			length |= (((long long)buffer[idx++]) << 48);
+			length |= (((long long)buffer[idx++]) << 40);
+			length |= (((long long)buffer[idx++]) << 32);
+			length |= (((long long)buffer[idx++]) << 24);
+			length |= (((long long)buffer[idx++]) << 16);
+			length |= (((long long)buffer[idx++]) << 8);
+			length |= (((long long)buffer[idx++]));
 		}
-		
+
 		char mask[4];
 		memcpy( mask, &buffer[idx], 4 );
 		idx += 4;
