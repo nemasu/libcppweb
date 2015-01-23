@@ -130,56 +130,58 @@ CppWeb::RecvThread( CppWeb *instance ) {
 	map<unsigned int, bool> *upgraded = instance->upgraded;
 	
 	while( 1 ) {
-		PacketImpl *packet = (PacketImpl*) asyncTransport->getPacket();
+		Packet *packet = asyncTransport->getPacket();
 		int fd = packet->fd;
-
-		if (packet->isPing == true) {
-			//Put back in transport, will serialize with proper opcode
-			asyncTransport->sendPacket(packet);
-			continue;
-		} else if(        packet->type == PacketType::DISCONNECT ) {
+		
+		if(        packet->type == PacketType::DISCONNECT ) {
 			upgraded->erase(fd);
 			webListener->onClose(packet->fd);
 		} else if( packet->type == PacketType::CONNECT ) { 
 			webListener->onConnect(packet->fd);
-		} else if( upgraded->count(fd) > 0) {
-			webListener->onData(packet->fd, packet->data, packet->size);
-		} else {
-			//need handshake first
-			//If upgrade requested, send reply
-			map<string, string> &headers = packet->headers;
-			
-			if( headers.count("Upgrade") > 0 && headers.count("Sec-WebSocket-Key") > 0 
-					&& headers["Upgrade"] == "websocket" ) {
-				
-				string key = headers["Sec-WebSocket-Key"] + SecMagic;
-				unsigned char hashed[SHA_DIGEST_LENGTH];
-				Hash("SHA1", (const char *)key.c_str(), key.length(), hashed);
-				string encodedKey = base64_encode( hashed, SHA_DIGEST_LENGTH );
-
-				PacketImpl *response = new PacketImpl();
-				response->setOrigin((Packet*) packet);
-				response->setResponseCode(101);
-				map<string, string> &responseHeaders = response->headers;
-				responseHeaders["Upgrade"]    = "websocket";
-				responseHeaders["Connection"] = "Upgrade";
-				responseHeaders["Sec-WebSocket-Accept"] = encodedKey;
-				(*upgraded)[fd] = true;
-				asyncTransport->sendPacket(response);
-				
+		} else if ( packet->type == PacketType::NORMAL ) {
+			PacketImpl *packetImpl = (PacketImpl *) packet;	
+			if (packetImpl->isPing == true) {
+				//Put back in transport, will serialize with proper opcode
+				asyncTransport->sendPacket(packet);
+				continue;
+			} else if( upgraded->count(fd) > 0) {
+				webListener->onData(fd, packetImpl->data, packetImpl->size);
 			} else {
-				//Not a websocket request, send 400
-				PacketImpl *response = new PacketImpl();
-				response->setOrigin((Packet*) packet);
-				response->setResponseCode(400);
-				asyncTransport->sendPacket(response);
+				//need handshake first
+				//If upgrade requested, send reply
+				map<string, string> &headers = packetImpl->headers;
+				
+				if( headers.count("Upgrade") > 0 && headers.count("Sec-WebSocket-Key") > 0 
+						&& headers["Upgrade"] == "websocket" ) {
+					
+					string key = headers["Sec-WebSocket-Key"] + SecMagic;
+					unsigned char hashed[SHA_DIGEST_LENGTH];
+					Hash("SHA1", (const char *)key.c_str(), key.length(), hashed);
+					string encodedKey = base64_encode( hashed, SHA_DIGEST_LENGTH );
 
-				Packet *disconnect = new Packet();
-				disconnect->setOrigin( (Packet *)packet );
-				disconnect->type = DISCONNECT;
-				asyncTransport->sendPacket( disconnect );
+					PacketImpl *response = new PacketImpl();
+					response->setOrigin((Packet*) packet);
+					response->setResponseCode(101);
+					map<string, string> &responseHeaders = response->headers;
+					responseHeaders["Upgrade"]    = "websocket";
+					responseHeaders["Connection"] = "Upgrade";
+					responseHeaders["Sec-WebSocket-Accept"] = encodedKey;
+					(*upgraded)[fd] = true;
+					asyncTransport->sendPacket(response);
+					
+				} else {
+					//Not a websocket request, send 400
+					PacketImpl *response = new PacketImpl();
+					response->setOrigin((Packet*) packet);
+					response->setResponseCode(400);
+					asyncTransport->sendPacket(response);
+
+					Packet *disconnect = new Packet();
+					disconnect->setOrigin( packet );
+					disconnect->type = DISCONNECT;
+					asyncTransport->sendPacket( disconnect );
+				}
 			}
-
 		}
 		
 		delete packet;
