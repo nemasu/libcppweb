@@ -18,12 +18,10 @@ using std::map;
 using std::string;
 using std::thread;
 
-typedef void (*recv_data_callback)(int, unsigned char *, unsigned int);
-
-CppWeb::CppWeb( recv_data_callback cb ) {
+CppWeb::CppWeb( WebListener *listener ) {
 	OpenSSL_add_all_algorithms();
-	
-	onData = cb;
+
+	webListener = listener;
 
 	packetParser   = new PacketParserImpl();
 	asyncTransport = new AsyncTransport( packetParser );
@@ -127,19 +125,22 @@ CppWeb::send( int fd, unsigned char *data, unsigned int length ) {
 
 void
 CppWeb::RecvThread( CppWeb *instance ) {
-	recv_data_callback onData  = instance->onData;
-	AsyncTransport *asyncTransport = instance->asyncTransport;
+	WebListener *webListener          = instance->webListener;
+	AsyncTransport *asyncTransport    = instance->asyncTransport;
 	map<unsigned int, bool> *upgraded = instance->upgraded;
 	
 	while( 1 ) {
 		PacketImpl *packet = (PacketImpl*) asyncTransport->getPacket();
 		int fd = packet->fd;
 
-		if(       packet->type == DISCONNECT ) {
+		//TODO need to handle pings/pongs
+		if(        packet->type == PacketType::DISCONNECT ) {
 			upgraded->erase(fd);
-			onData(packet->fd, NULL, 0);
-		} else if(upgraded->count(fd) > 0) {
-			onData(packet->fd, packet->data, packet->size);
+			webListener->onClose(packet->fd);
+		} else if( packet->type == PacketType::CONNECT ) { 
+			webListener->onConnect(packet->fd);
+		} else if( upgraded->count(fd) > 0) {
+			webListener->onData(packet->fd, packet->data, packet->size);
 		} else {
 			//need handshake first
 			//If upgrade requested, send reply

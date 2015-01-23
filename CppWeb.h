@@ -13,11 +13,16 @@ using std::map;
 using std::string;
 using std::thread;
 
-typedef void (*recv_data_callback)(int, unsigned char *, unsigned int);
+class WebListener {
+	public:
+		virtual void onData(int fd, unsigned char *data, unsigned int length) = 0;
+		virtual void onConnect(int fd) = 0;
+		virtual void onClose(int fd) = 0;
+};
 
 class CppWeb {
 	public:
-		CppWeb( recv_data_callback cb );
+		CppWeb( WebListener * );
 
 		~CppWeb();
 		
@@ -37,7 +42,7 @@ class CppWeb {
 		PacketParser *packetParser;
 		AsyncTransport *asyncTransport;
 		map<unsigned int, bool> *upgraded;
-		recv_data_callback onData;
+		WebListener *webListener;
 
 		static const string SecMagic;
 		
