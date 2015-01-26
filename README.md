@@ -1,4 +1,4 @@
 # libcppweb
 C++ web socket server library for Linux.
 
-Work in progress.
+Check noopchat for demo / example.
