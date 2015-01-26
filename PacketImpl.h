@@ -7,8 +7,9 @@
 class PacketImpl : public Packet {
     public:
         PacketImpl() {
-            size = 0;
-            data = NULL;
+            size   = 0;
+            data   = NULL;
+            isPing = false;
         }
 
         ~PacketImpl() {
