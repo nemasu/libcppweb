@@ -1,6 +1,8 @@
 #ifndef __CPPWEB_H__
 #define __CPPWEB_H__
 
+#include "PacketImpl.h"
+#include "PacketParserImpl.h"
 #include <unistd.h>
 #include <string.h>
 #include <iostream>
@@ -22,12 +24,14 @@ class WebListener {
 
 class CppWeb {
 	public:
-		CppWeb( WebListener * );
-
+		CppWeb( WebListener & );
 		~CppWeb();
 		
 		void
 		start( int port );
+
+		void
+		stop();
 
 		void
 		send( int fd, unsigned char *data, unsigned int size );
@@ -39,15 +43,17 @@ class CppWeb {
 		static unsigned int
 		Hash(const char *mode, const char* dataToHash, size_t dataSize, unsigned char* outHashed); 
 		
-		PacketParser *packetParser;
-		AsyncTransport *asyncTransport;
-		map<unsigned int, bool> *upgraded;
-		WebListener *webListener;
+		PacketParserImpl packetParser;
+		AsyncTransport   asyncTransport;
+		map<unsigned int, bool> upgraded;
+		WebListener &webListener;
 
 		static const string SecMagic;
 		
 		static void
-		RecvThread( CppWeb *instance );
+		RecvThread( CppWeb &instance );
+
+		volatile bool isRunning;
 };
 
 #endif

@@ -21,6 +21,6 @@ clean:
 
 install: all
 	mkdir -p /usr/include/libcppweb
-	cp -v CppWeb.h /usr/include/libcppweb
+	cp -v *.h /usr/include/libcppweb
 	cp -v libcppweb.so /usr/lib
 

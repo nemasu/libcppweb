@@ -8,19 +8,20 @@ using std::map;
 
 class PacketParserImpl : public PacketParser {
 
-	~PacketParserImpl();
+	public:
+		~PacketParserImpl();
 
-	int
-	isHTTPTerminated ( unsigned char *buffer, unsigned int bufferSize );
+		int
+		isHTTPTerminated ( unsigned char *buffer, unsigned int bufferSize );
 
-	map<string, string>
-	parseHTTP ( unsigned char *buffer, unsigned int size ); 
-	
-	Packet*
-	deserialize ( unsigned char *buffer, unsigned int bufferSize, unsigned int *bufferUsed );
+		map<string, string>
+		parseHTTP ( unsigned char *buffer, unsigned int size ); 
+		
+		Packet*
+		deserialize ( unsigned char *buffer, unsigned int bufferSize, unsigned int *bufferUsed );
 
-	char *
-	serialize ( Packet *pkt, unsigned int *out_size );
+		char *
+		serialize ( Packet *pkt, unsigned int *out_size );
 };
 
 #endif
