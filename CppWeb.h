@@ -54,6 +54,8 @@ class CppWeb {
 		RecvThread( CppWeb &instance );
 
 		volatile bool isRunning;
+
+		thread recvThread;
 };
 
 #endif

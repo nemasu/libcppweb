@@ -8,7 +8,7 @@ debug: CCOPTS += -g
 debug: libcppweb
 
 libcppweb: CppWeb.o PacketParserImpl.o
-	${CC} ${CCOPTS} -shared CppWeb.o PacketParserImpl.o -o libcppweb.so -lcrypto -lasock
+	${CC} ${CCOPTS} -shared CppWeb.o PacketParserImpl.o -o libcppweb.so -lcrypto -lasock -lpthread
 
 PacketParserImpl.o: PacketParserImpl.h PacketParserImpl.cpp
 	${CC} -c ${CCOPTS} PacketParserImpl.cpp -o PacketParserImpl.o
