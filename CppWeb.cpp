@@ -91,6 +91,11 @@ CppWeb::base64_encode( unsigned char* data, int size )
 
 	// assign data to output
 	std::string s(dt, len);
+	
+	//Free BIO
+	BIO_free(b64);
+	BIO_free(mem);
+	
 	return s;
 }
 
