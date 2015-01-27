@@ -16,7 +16,7 @@ using std::string;
 using std::thread;
 
 CppWeb::CppWeb( WebListener &listener )
-	: asyncTransport( packetParser ), webListener(listener) {
+	: asyncTransport( packetParser ), webListener( listener ) {
 	isRunning = false;
 	OpenSSL_add_all_algorithms();
 }
@@ -46,8 +46,6 @@ CppWeb::~CppWeb() {
 string
 CppWeb::base64_encode( unsigned char* data, int size )
 {
-	// bio is simply a class that wraps BIO* and it free the BIO in the destructor.
-
 	BIO *b64 = BIO_new(BIO_f_base64()); // create BIO to perform base64
 	BIO_set_flags(b64,BIO_FLAGS_BASE64_NO_NL);
 
@@ -133,8 +131,9 @@ CppWeb::RecvThread( CppWeb &instance ) {
 	AsyncTransport &asyncTransport    = instance.asyncTransport;
 	map<unsigned int, bool> &upgraded = instance.upgraded;
 
-	//TODO don't check flag all the time
 	while( instance.isRunning ) {
+		//Will block till packet is recvd.
+		//If shutting down, NULL packet will be received.
 		Packet *packet = asyncTransport.getPacket();
 		if( packet != NULL ) {	
 			int fd = packet->fd;
