@@ -2,7 +2,7 @@ CC=g++
 CCOPTS=-std=c++11 -fpic -Wall -Werror -I/usr/include/libasock
 
 all: CCOPTS += -O2
-all: libcppweb
+all: libcppweb strip
 
 debug: CCOPTS += -g
 debug: libcppweb
@@ -15,6 +15,9 @@ PacketParserImpl.o: PacketParserImpl.h PacketParserImpl.cpp
 
 CppWeb.o: CppWeb.cpp CppWeb.h
 	${CC} -c ${CCOPTS} CppWeb.cpp -o CppWeb.o
+
+strip: libcppweb
+	strip --strip-debug libcppweb.so
 
 clean:
 	rm -rf *.o libcppweb*
