@@ -43,6 +43,11 @@ CppWeb::~CppWeb() {
 	}
 }
 
+void
+CppWeb::close( int fd ) {
+	asyncTransport.closeFd(fd);
+}
+
 string
 CppWeb::base64_encode( unsigned char* data, int size )
 {
@@ -142,6 +147,9 @@ CppWeb::RecvThread( CppWeb &instance ) {
 				upgraded.erase(fd);
 				webListener.onClose(packet->fd);
 			} else if( packet->type == PacketType::CONNECT ) { 
+				//If connect recv'd on upgraded fd, invalidate.
+				upgraded.erase(fd);
+
 				webListener.onConnect(packet->fd);
 			} else if ( packet->type == PacketType::NORMAL ) {
 				PacketImpl *packetImpl = (PacketImpl *) packet;	

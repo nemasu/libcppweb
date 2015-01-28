@@ -36,6 +36,9 @@ class CppWeb {
 		void
 		send( int fd, unsigned char *data, unsigned int size );
 
+		void
+		close( int fd );
+
 	private:
 		static
 		string base64_encode( unsigned char* data, int size );
