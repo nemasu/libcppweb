@@ -17,20 +17,16 @@ class Listener : public WebListener {
 		void onClose(int fd){}
 };
 
-Listener *listener;
 
 int
 main( int argv, char **argc ) {
-	listener = new Listener();
-	cw = new CppWeb(listener);
-	cw->start(8000);
+	Listener listener;
+	CppWeb cw(listener);
+	cw.start(8000);
 
 	while(1) {
 		usleep(1000000);
 	}
 
-	delete cw;
-	delete listener;
-	
 	return 0;
 }

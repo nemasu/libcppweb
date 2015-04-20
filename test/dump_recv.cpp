@@ -23,15 +23,13 @@ class Listener : public WebListener {
 
 int
 main( int argv, char **argc ) {
-	Listener *listener = new Listener();
+	Listener listener;
 	CppWeb cw(listener);
 	cw.start(8000);
 
 	while(1) {
 		usleep(1000000);
 	}
-
-	delete listener;
 
 	return 0;
 }
