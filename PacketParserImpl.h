@@ -9,7 +9,20 @@ using std::map;
 class PacketParserImpl : public PacketParser {
 
 	public:
+		PacketParserImpl(bool isBinary) {
+			isBinary = isBinary;
+		}
+
+		PacketParserImpl() {
+			isBinary = false;
+		}
+
 		~PacketParserImpl();
+
+		void
+		setBinaryFrames(bool isBinary) {
+			this->isBinary = isBinary;
+		}
 
 		int
 		isHTTPTerminated ( unsigned char *buffer, unsigned int bufferSize );
@@ -22,6 +35,9 @@ class PacketParserImpl : public PacketParser {
 
 		char *
 		serialize ( Packet *pkt, unsigned int *out_size );
+
+	private:
+		bool isBinary;
 };
 
 #endif

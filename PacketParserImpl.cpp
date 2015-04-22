@@ -214,8 +214,11 @@ PacketParserImpl::serialize ( Packet *pkt, unsigned int *out_size ) {
 		if( packet->isPing ) {
 			frame[0] = (char) 138; // Fin & pong
 		} else {
-			//frame[0] = (char) 130; //Fin and Binary data
-			frame[0] = (char) 129; //Fin and text data
+			if ( isBinary ) {
+				frame[0] = (char) 130; //Fin and Binary data
+			} else {
+				frame[0] = (char) 129; //Fin and text data
+			}
 		}
 			
 		long long packetSize = packet->size;

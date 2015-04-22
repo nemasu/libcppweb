@@ -19,6 +19,7 @@ CppWeb::CppWeb( WebListener &listener )
 	: asyncTransport( packetParser ), webListener( listener ) {
 	isRunning = false;
 	OpenSSL_add_all_algorithms();
+	packetParser.setBinaryFrames(true);
 }
 
 void
