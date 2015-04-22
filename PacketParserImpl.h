@@ -9,10 +9,6 @@ using std::map;
 class PacketParserImpl : public PacketParser {
 
 	public:
-		PacketParserImpl(bool isBinary) {
-			isBinary = isBinary;
-		}
-
 		PacketParserImpl() {
 			isBinary = false;
 		}

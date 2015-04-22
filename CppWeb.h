@@ -39,6 +39,11 @@ class CppWeb {
 		void
 		close( int fd );
 
+		void
+		setBinaryFrames(bool isBinary) {
+			packetParser.setBinaryFrames(isBinary);
+		}
+
 	private:
 		static
 		string base64_encode( unsigned char* data, int size );
