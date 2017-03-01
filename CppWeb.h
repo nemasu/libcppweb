@@ -7,7 +7,7 @@
 #include <string.h>
 #include <iostream>
 #include <thread>
-#include <AsyncTransport.h>
+#include <libasock/TLSTransport.h>
 
 using std::cout;
 using std::endl;
@@ -29,6 +29,9 @@ class CppWeb {
 		
 		void
 		start( int port );
+
+        void
+        startSecure( int port, string certificateFile, string privateKeyFile );
 
 		void
 		stop();
@@ -52,7 +55,7 @@ class CppWeb {
 		Hash(const char *mode, const char* dataToHash, size_t dataSize, unsigned char* outHashed); 
 		
 		PacketParserImpl packetParser;
-		AsyncTransport   asyncTransport;
+		AsyncTransport   *asyncTransport;
 		map<unsigned int, bool> upgraded;
 		WebListener &webListener;
 

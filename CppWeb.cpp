@@ -16,17 +16,31 @@ using std::string;
 using std::thread;
 
 CppWeb::CppWeb( WebListener &listener )
-	: asyncTransport( packetParser ), webListener( listener ) {
-	isRunning = false;
-	OpenSSL_add_all_algorithms();
+    : webListener( listener ) {
+    OpenSSL_add_all_algorithms();
+    isRunning = false;
 	packetParser.setBinaryFrames(true);
 }
 
 void
 CppWeb::start( int port ) {
+    asyncTransport = new AsyncTransport( packetParser );
+
 	isRunning = true;
-	asyncTransport.init( port );
-	asyncTransport.start();
+	asyncTransport->init( port );
+	asyncTransport->start();
+
+	recvThread = thread( RecvThread, std::ref(*this) );
+	recvThread.detach();
+}
+
+void
+CppWeb::startSecure( int port, string certificateFile, string privateKeyFile ) {
+    asyncTransport = new TLSTransport( packetParser, certificateFile, privateKeyFile );
+
+    isRunning = true;
+	asyncTransport->init( port );
+	asyncTransport->start();
 
 	recvThread = thread( RecvThread, std::ref(*this) );
 	recvThread.detach();
@@ -35,7 +49,7 @@ CppWeb::start( int port ) {
 void
 CppWeb::stop() {
 	isRunning = false;
-	asyncTransport.stop();
+	asyncTransport->stop();
 }
 
 CppWeb::~CppWeb() {
@@ -46,7 +60,7 @@ CppWeb::~CppWeb() {
 
 void
 CppWeb::close( int fd ) {
-	asyncTransport.closeFd(fd);
+	asyncTransport->closeFd(fd);
 }
 
 string
@@ -128,19 +142,19 @@ CppWeb::send( int fd, unsigned char *data, unsigned int length ) {
 	memcpy(packet->data, data, length);
 	packet->fd = fd;
 
-	asyncTransport.sendPacket(packet);
+	asyncTransport->sendPacket(packet);
 }
 
 void
 CppWeb::RecvThread( CppWeb &instance ) {
 	WebListener &webListener          = instance.webListener;
-	AsyncTransport &asyncTransport    = instance.asyncTransport;
+	AsyncTransport *asyncTransport    = instance.asyncTransport;
 	map<unsigned int, bool> &upgraded = instance.upgraded;
 
 	while( instance.isRunning ) {
 		//Will block till packet is recvd.
 		//If shutting down, NULL packet will be received.
-		Packet *packet = asyncTransport.getPacket();
+		Packet *packet = asyncTransport->getPacket();
 		if( packet != NULL ) {	
 			int fd = packet->fd;
 			
@@ -156,7 +170,7 @@ CppWeb::RecvThread( CppWeb &instance ) {
 				PacketImpl *packetImpl = (PacketImpl *) packet;	
 				if (packetImpl->isPing == true) {
 					//Put back in transport, will serialize with proper opcode
-					asyncTransport.sendPacket(packet);
+					asyncTransport->sendPacket(packet);
 					continue;
 				} else if( upgraded.count(fd) > 0) {
 					webListener.onData(fd, packetImpl->data, packetImpl->size);
@@ -181,19 +195,19 @@ CppWeb::RecvThread( CppWeb &instance ) {
 						responseHeaders["Connection"] = "Upgrade";
 						responseHeaders["Sec-WebSocket-Accept"] = encodedKey;
 						upgraded[fd] = true;
-						asyncTransport.sendPacket(response);
+						asyncTransport->sendPacket(response);
 						
 					} else {
 						//Not a websocket request, send 400
 						PacketImpl *response = new PacketImpl();
 						response->setOrigin((Packet*) packet);
 						response->setResponseCode(400);
-						asyncTransport.sendPacket(response);
+						asyncTransport->sendPacket(response);
 
 						Packet *disconnect = new Packet();
 						disconnect->setOrigin( packet );
 						disconnect->type = DISCONNECT;
-						asyncTransport.sendPacket( disconnect );
+						asyncTransport->sendPacket( disconnect );
 					}
 				}
 			}

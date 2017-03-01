@@ -1,5 +1,5 @@
 CC=g++
-CCOPTS=-std=c++11 -fpic -Wall -Werror -I/usr/include/libasock
+CCOPTS=-std=c++11 -fpic -Wall -Werror
 
 all: CCOPTS += -O2
 all: libcppweb strip

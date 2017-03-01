@@ -1,7 +1,7 @@
 #ifndef __PACKETIMPL_H__
 #define __PACKETIMPL_H__
 
-#include <AsyncTransport.h>
+#include <libasock/AsyncTransport.h>
 
 //Simple packet that just contains byte array or HTTP headers
 class PacketImpl : public Packet {
