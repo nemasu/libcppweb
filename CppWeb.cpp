@@ -159,9 +159,11 @@ CppWeb::RecvThread( CppWeb &instance ) {
 			int fd = packet->fd;
 			
 			if(        packet->type == PacketType::DISCONNECT ) {
+				if(DEBUG) std::cerr << "libcppweb: PacketType::DISCONNECT received" << std::endl;
 				upgraded.erase(fd);
 				webListener.onClose(packet->fd);
 			} else if( packet->type == PacketType::CONNECT ) { 
+				if(DEBUG) std::cerr << "libcppweb: PacketType::CONNECT received" << std::endl;
 				//If connect recv'd on upgraded fd, invalidate.
 				upgraded.erase(fd);
 
@@ -175,6 +177,7 @@ CppWeb::RecvThread( CppWeb &instance ) {
 				} else if( upgraded.count(fd) > 0) {
 					webListener.onData(fd, packetImpl->data, packetImpl->size);
 				} else {
+					if(DEBUG) std::cerr << "libcppweb: attempting websocket handshake." << std::endl;
 					//need handshake first
 					//If upgrade requested, send reply
 					map<string, string> &headers = packetImpl->headers;

@@ -9,6 +9,10 @@
 #include <thread>
 #include <libasock/TLSTransport.h>
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
 using std::cout;
 using std::endl;
 using std::map;

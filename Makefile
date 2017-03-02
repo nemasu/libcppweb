@@ -1,5 +1,5 @@
 CC=g++
-CCOPTS=-std=c++11 -fpic -Wall -Werror
+CCOPTS=-std=c++11 -fpic -Wall -Werror ${CXXFLAGS}
 
 all: CCOPTS += -O2
 all: libcppweb strip
